@@ -1,0 +1,243 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="coqdoc.css" rel="stylesheet" type="text/css" />
+<title>main</title>
+</head>
+
+<body>
+
+<div id="page">
+
+<div id="header">
+</div>
+
+<div id="main">
+
+<h1 class="libtitle">Library main</h1>
+
+<div class="code">
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="var">ZArith.Znat</span> <span class="id" title="var">ZArith.BinInt</span> <span class="id" title="var">Lists.List</span>.<br/>
+<span class="id" title="keyword">Require</span> <span class="id" title="keyword">Import</span> <span class="id" title="var">Autosubst.Autosubst</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a id="lab1"></a><h1 class="section">PCF</h1>
+
+<div class="paragraph"> </div>
+
+
+<div class="paragraph"> </div>
+
+  In this section we introduce the language PCF. We define its syntax, its
+  type-system, and its operational semantics.
+
+<div class="paragraph"> </div>
+
+  In order to not have to worry about substitution and alpha-equivalence we use
+  de Bruijn indices. This means that lambda's do not include a variable name. To
+  manage the de Bruijn indices we use the autosubst library. This library gives
+  us a lot of things for free.
+
+<div class="paragraph"> </div>
+
+ We first define the syntax of the types of the programming language. 
+</div>
+<div class="code">
+<span class="id" title="keyword">Inductive</span> <span class="id" title="keyword">type</span> :=<br/>
+| <span class="id" title="var">TNat</span><br/>
+| <span class="id" title="var">TFun</span> (<span class="id" title="var">a</span> <span class="id" title="var">b</span> : <span class="id" title="keyword">type</span>).<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+We define some handy notation for the types. 
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="var">Declare</span> <span class="id" title="keyword">Scope</span> <span class="id" title="var">pcf_type_scope</span>.<br/>
+<span class="id" title="keyword">Delimit</span> <span class="id" title="keyword">Scope</span> <span class="id" title="var">pcf_type_scope</span> <span class="id" title="keyword">with</span> <span class="id" title="var">T</span>.<br/>
+<span class="id" title="keyword">Bind</span> <span class="id" title="keyword">Scope</span> <span class="id" title="var">pcf_type_scope</span> <span class="id" title="keyword">with</span> <span class="id" title="keyword">type</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Notation</span> &quot;'N'" := (<span class="id" title="var">TNat</span>) : <span class="id" title="var">pcf_type_scope</span>.<br/>
+<span class="id" title="keyword">Notation</span> &quot;A -&gt; B" := (<span class="id" title="var">TFun</span> <span class="id" title="var">A</span> <span class="id" title="var">B</span>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 99, <span class="id" title="var">B</span> <span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 200, <span class="id" title="tactic">right</span> <span class="id" title="keyword">associativity</span>) : <span class="id" title="var">pcf_type_scope</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+The syntax of PCF. Note the curly braces in the <span class="inlinecode"><span class="id" title="var">Lam</span></span>, these create a binder
+    through the autosubst library. 
+</div>
+<div class="code">
+<span class="id" title="keyword">Inductive</span> <span class="id" title="var">term</span> :=<br/>
+| <span class="id" title="var">Var</span> (<span class="id" title="var">x</span> : <span class="id" title="var">var</span>)                            <br/>
+| <span class="id" title="var">App</span> (<span class="id" title="var">e1</span> <span class="id" title="var">e2</span> : <span class="id" title="var">term</span>)                       <br/>
+| <span class="id" title="var">Lam</span> (<span class="id" title="var">t</span>: <span class="id" title="keyword">type</span>) (<span class="id" title="var">s</span> : {<span class="id" title="var">bind</span> <span class="id" title="var">term</span>})          <br/>
+| <span class="id" title="var">Y</span> (<span class="id" title="var">x</span> : <span class="id" title="var">term</span>)                             <br/>
+| <span class="id" title="var">Zero</span>                                     <br/>
+| <span class="id" title="var">Succ</span> (<span class="id" title="var">x</span> : <span class="id" title="var">term</span>)                          <br/>
+| <span class="id" title="var">Pred</span> (<span class="id" title="var">x</span> : <span class="id" title="var">term</span>)                          <br/>
+| <span class="id" title="var">Ifz</span> (<span class="id" title="var">ec</span> <span class="id" title="var">et</span> <span class="id" title="var">el</span> : <span class="id" title="var">term</span>). 
+<br/>
+</div>
+
+<div class="doc">
+Next we must write a bit of boilerplate for autosubst. 
+</div>
+<div class="code">
+<span class="id" title="keyword">Instance</span> <span class="id" title="var">Ids_term</span> : <span class="id" title="var">Ids</span> <span class="id" title="var">term</span>. <span class="id" title="var">derive</span>. <span class="id" title="keyword">Defined</span>.<br/>
+<span class="id" title="keyword">Instance</span> <span class="id" title="var">Rename_term</span> : <span class="id" title="var">Rename</span> <span class="id" title="var">term</span>. <span class="id" title="var">derive</span>. <span class="id" title="keyword">Defined</span>.<br/>
+<span class="id" title="keyword">Instance</span> <span class="id" title="var">Subst_term</span> : <span class="id" title="var">Subst</span> <span class="id" title="var">term</span>. <span class="id" title="var">derive</span>. <span class="id" title="keyword">Defined</span>.<br/>
+<span class="id" title="keyword">Instance</span> <span class="id" title="var">SubstLemmas_term</span> : <span class="id" title="var">SubstLemmas</span> <span class="id" title="var">term</span>. <span class="id" title="var">derive</span>. <span class="id" title="keyword">Qed</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+We want a nice way to write PCF terms in Coq so we declare a notation scope. 
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="var">Declare</span> <span class="id" title="keyword">Scope</span> <span class="id" title="var">term_scope</span>.<br/>
+<span class="id" title="keyword">Delimit</span> <span class="id" title="keyword">Scope</span> <span class="id" title="var">term_scope</span> <span class="id" title="keyword">with</span> <span class="id" title="var">E</span>.<br/>
+<span class="id" title="keyword">Bind</span> <span class="id" title="keyword">Scope</span> <span class="id" title="var">term_scope</span> <span class="id" title="keyword">with</span> <span class="id" title="var">term</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Converts a nat into a term. This function is the same as the underline
+    notation that Streicher uses. 
+</div>
+<div class="code">
+<span class="id" title="keyword">Fixpoint</span> <span class="id" title="var">of_nat</span> (<span class="id" title="var">n</span> : <span class="id" title="var">nat</span>) : <span class="id" title="var">term</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">n</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">O</span> ⇒ <span class="id" title="var">Zero</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">S</span> <span class="id" title="var">n</span> ⇒ <span class="id" title="var">Succ</span> (<span class="id" title="var">of_nat</span> <span class="id" title="var">n</span>)<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+We now introduce notation for the PCF term. Note that in the notation for
+    lambda the thing proceeding the <span class="inlinecode"><span class="id" title="var">λ</span></span> is a type and not a variable name. 
+</div>
+<div class="code">
+<span class="id" title="keyword">Notation</span> &quot;#v x" := (<span class="id" title="var">Var</span> <span class="id" title="var">x</span>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 80) : <span class="id" title="var">term_scope</span>.<br/>
+<span class="id" title="keyword">Notation</span> &quot;# n" := (<span class="id" title="var">of_nat</span> <span class="id" title="var">n</span>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 8) : <span class="id" title="var">term_scope</span>.<br/>
+<span class="id" title="keyword">Notation</span> &quot;'λ' t ',' e" := (<span class="id" title="var">Lam</span> <span class="id" title="var">t</span> <span class="id" title="var">e</span>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 80) : <span class="id" title="var">term_scope</span>.<br/>
+<span class="id" title="keyword">Notation</span> &quot;'ifz' cond 'then' e1 'else' e2" := (<span class="id" title="var">Ifz</span> <span class="id" title="var">cond</span> <span class="id" title="var">e1</span> <span class="id" title="var">e2</span>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 70) : <span class="id" title="var">term_scope</span>.<br/>
+<span class="id" title="keyword">Notation</span> &quot;e1 $ e2" := (<span class="id" title="var">App</span> <span class="id" title="var">e1</span> <span class="id" title="var">e2</span>) (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 80) : <span class="id" title="var">term_scope</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+Converts a term into a Z. 
+</div>
+<div class="code">
+<span class="id" title="keyword">Fixpoint</span> <span class="id" title="var">to_Z</span> (<span class="id" title="var">e</span> : <span class="id" title="var">term</span>) : <span class="id" title="var">option</span> <span class="id" title="var">Z</span> :=<br/>
+&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">e</span> <span class="id" title="keyword">with</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">Zero</span> ⇒ <span class="id" title="var">Some</span> 0%<span class="id" title="var">Z</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">Succ</span> <span class="id" title="var">e'</span> ⇒<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="id" title="keyword">match</span> <span class="id" title="var">to_Z</span> <span class="id" title="var">e'</span> <span class="id" title="keyword">with</span> | <span class="id" title="var">None</span> ⇒ <span class="id" title="var">None</span> | <span class="id" title="var">Some</span> <span class="id" title="var">n</span> ⇒ <span class="id" title="var">Some</span> (1 + <span class="id" title="var">n</span>)%<span class="id" title="var">Z</span> <span class="id" title="keyword">end</span><br/>
+&nbsp;&nbsp;| <span class="id" title="var">_</span> ⇒ <span class="id" title="var">None</span><br/>
+&nbsp;&nbsp;<span class="id" title="keyword">end</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="var">of_Z</span> (<span class="id" title="var">z</span> : <span class="id" title="var">Z</span>) : <span class="id" title="var">term</span> := <span class="id" title="var">of_nat</span> (<span class="id" title="var">Z.to_nat</span> <span class="id" title="var">z</span>).<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+By creating a numberal notation we can write numerals/literals to denote
+    terms. Note that this only lets us write constants, e.g., <span class="inlinecode">3</span>, for a term,
+    not <span class="inlinecode"><span class="id" title="var">n</span></span> for any natural number. For that we use <span class="inlinecode">#<span class="id" title="var">n</span></span>. 
+</div>
+<div class="code">
+<span class="id" title="var">Numeral</span> <span class="id" title="keyword">Notation</span> <span class="id" title="var">term</span> <span class="id" title="var">of_Z</span> <span class="id" title="var">to_Z</span> : <span class="id" title="var">term_scope</span>.<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+We now define the small-steps operational semantics of the programming
+    language. 
+<div class="paragraph"> </div>
+
+<a id="lab2"></a><h2 class="section">Small steps semantics.</h2>
+
+</div>
+<div class="code">
+
+<br/>
+<span class="id" title="keyword">Reserved Notation</span> &quot;e1 ⇓ e2" (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 50).<br/>
+
+<br/>
+<span class="id" title="keyword">Inductive</span> <span class="id" title="var">step</span> : <span class="id" title="var">term</span> → <span class="id" title="var">term</span> → <span class="id" title="keyword">Prop</span> :=<br/>
+| <span class="id" title="var">Step_var</span> <span class="id" title="var">x</span> : <span class="id" title="var">Var</span> <span class="id" title="var">x</span> ⇓ <span class="id" title="var">Var</span> <span class="id" title="var">x</span><br/>
+| <span class="id" title="var">Step_app</span> <span class="id" title="var">f</span> <span class="id" title="var">e</span> <span class="id" title="var">v</span> : <span class="id" title="var">f</span>.[<span class="id" title="var">e</span>/] ⇓ <span class="id" title="var">v</span> → (<span class="id" title="var">f</span> $ <span class="id" title="var">e</span>) ⇓ <span class="id" title="var">v</span><br/>
+| <span class="id" title="var">Step_lam</span> <span class="id" title="var">t</span> <span class="id" title="var">e</span> : (<span class="id" title="var">λ</span> <span class="id" title="var">t</span>, <span class="id" title="var">e</span>) ⇓ <span class="id" title="var">λ</span> <span class="id" title="var">t</span>, <span class="id" title="var">e</span><br/>
+| <span class="id" title="var">Step_y</span> <span class="id" title="var">f</span> <span class="id" title="var">e</span> : (<span class="id" title="var">f</span> $ <span class="id" title="var">Y</span> <span class="id" title="var">f</span>) ⇓ <span class="id" title="var">e</span> → <span class="id" title="var">Y</span> <span class="id" title="var">f</span> ⇓ <span class="id" title="var">e</span><br/>
+| <span class="id" title="var">Step_zero</span> : 0 ⇓ 0<br/>
+| <span class="id" title="var">Step_succ</span> <span class="id" title="var">e</span> (<span class="id" title="var">n</span> : <span class="id" title="var">nat</span>) : <span class="id" title="var">e</span> ⇓ #<span class="id" title="var">n</span> → <span class="id" title="var">Succ</span> <span class="id" title="var">e</span> ⇓ #(<span class="id" title="var">n</span> + 1)<br/>
+| <span class="id" title="var">Step_pred_zero</span> <span class="id" title="var">e</span> : <span class="id" title="var">e</span> ⇓ #0 → <span class="id" title="var">Pred</span> <span class="id" title="var">e</span> ⇓ #0<br/>
+| <span class="id" title="var">Step_pred_succ</span> <span class="id" title="var">e</span> <span class="id" title="var">n</span> : <span class="id" title="var">e</span> ⇓ #(<span class="id" title="var">n</span> + 1) → <span class="id" title="var">Pred</span> <span class="id" title="var">e</span> ⇓ #<span class="id" title="var">n</span> <br/>
+| <span class="id" title="var">Step_ifz_zero</span> <span class="id" title="var">e1</span> <span class="id" title="var">e2</span> <span class="id" title="var">e3</span> : <span class="id" title="var">e1</span> ⇓ 0 → (<span class="id" title="var">ifz</span> <span class="id" title="var">e1</span> <span class="id" title="keyword">then</span> <span class="id" title="var">e2</span> <span class="id" title="keyword">else</span> <span class="id" title="var">e3</span>) ⇓ <span class="id" title="var">e1</span><br/>
+| <span class="id" title="var">Step_ifz_succ</span> <span class="id" title="var">e1</span> <span class="id" title="var">n</span> <span class="id" title="var">e2</span> <span class="id" title="var">e3</span> : <span class="id" title="var">e1</span> ⇓ #(<span class="id" title="var">n</span> + 1) → (<span class="id" title="var">ifz</span> <span class="id" title="var">e1</span> <span class="id" title="keyword">then</span> <span class="id" title="var">e2</span> <span class="id" title="keyword">else</span> <span class="id" title="var">e3</span>) ⇓ <span class="id" title="var">e2</span><br/>
+<span class="id" title="keyword">where</span> &quot;e1 ⇓ e2" := (<span class="id" title="var">step</span> <span class="id" title="var">e1</span> <span class="id" title="var">e2</span>).<br/>
+
+<br/>
+<span class="id" title="keyword">Definition</span> <span class="id" title="keyword">context</span> := <span class="id" title="var">list</span> <span class="id" title="keyword">type</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Implicit</span> <span class="id" title="keyword">Type</span> <span class="id" title="var">Γ</span> : <span class="id" title="keyword">context</span>.<br/>
+
+<br/>
+<span class="id" title="keyword">Reserved Notation</span> &quot;g '⊢' e ':' t" (<span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 40, <span class="id" title="var">e</span> <span class="id" title="tactic">at</span> <span class="id" title="var">next</span> <span class="id" title="keyword">level</span>, <span class="id" title="var">t</span> <span class="id" title="tactic">at</span> <span class="id" title="keyword">level</span> 0).<br/>
+
+<br/>
+<span class="id" title="keyword">Inductive</span> <span class="id" title="var">ty</span> (<span class="id" title="var">Γ</span> : <span class="id" title="keyword">context</span>) : <span class="id" title="var">term</span> → <span class="id" title="keyword">type</span> → <span class="id" title="keyword">Prop</span> :=<br/>
+| <span class="id" title="var">Ty_Var</span> <span class="id" title="var">x</span> <span class="id" title="var">A</span> : (<span class="id" title="var">nth_error</span> <span class="id" title="var">Γ</span> <span class="id" title="var">x</span> = <span class="id" title="var">Some</span> <span class="id" title="var">A</span>) → <span class="id" title="var">Γ</span> ⊢ <span class="id" title="var">Var</span> <span class="id" title="var">x</span> : <span class="id" title="var">A</span><br/>
+| <span class="id" title="var">Ty_App</span> <span class="id" title="var">f</span> <span class="id" title="var">a</span> <span class="id" title="var">A</span> <span class="id" title="var">B</span> : (<span class="id" title="var">Γ</span> ⊢ <span class="id" title="var">f</span> : (<span class="id" title="var">A</span> → <span class="id" title="var">B</span>)) → (<span class="id" title="var">Γ</span> ⊢ <span class="id" title="var">a</span> : <span class="id" title="var">A</span>) → <span class="id" title="var">Γ</span> ⊢ (<span class="id" title="var">f</span> $ <span class="id" title="var">a</span>) : <span class="id" title="var">B</span><br/>
+| <span class="id" title="var">Ty_Lam</span> <span class="id" title="var">e</span> <span class="id" title="var">A</span> <span class="id" title="var">B</span> : (<span class="id" title="var">A</span> :: <span class="id" title="var">Γ</span>) ⊢ <span class="id" title="var">e</span> : <span class="id" title="var">B</span> → <span class="id" title="var">Γ</span> ⊢ (<span class="id" title="var">λ</span> <span class="id" title="var">A</span>, <span class="id" title="var">e</span>) : (<span class="id" title="var">A</span> → <span class="id" title="var">B</span>)<br/>
+| <span class="id" title="var">Ty_Y</span> <span class="id" title="var">e</span> <span class="id" title="var">A</span> : <span class="id" title="var">Γ</span> ⊢ <span class="id" title="var">e</span> : (<span class="id" title="var">A</span> → <span class="id" title="var">A</span>) → <span class="id" title="var">Γ</span> ⊢ <span class="id" title="var">Y</span> <span class="id" title="var">e</span> : <span class="id" title="var">A</span><br/>
+| <span class="id" title="var">Ty_Zero</span> : <span class="id" title="var">Γ</span> ⊢ 0 : <span class="id" title="var">N</span><br/>
+| <span class="id" title="var">Ty_Succ</span> <span class="id" title="var">n</span> : (<span class="id" title="var">Γ</span> ⊢ <span class="id" title="var">n</span> : <span class="id" title="var">N</span>) → <span class="id" title="var">Γ</span> ⊢ <span class="id" title="var">Succ</span> <span class="id" title="var">n</span> : <span class="id" title="var">N</span><br/>
+| <span class="id" title="var">Ty_Pred</span> <span class="id" title="var">n</span> : (<span class="id" title="var">Γ</span> ⊢ <span class="id" title="var">n</span> : <span class="id" title="var">N</span>) → <span class="id" title="var">Γ</span> ⊢ <span class="id" title="var">Succ</span> <span class="id" title="var">n</span> : <span class="id" title="var">N</span><br/>
+| <span class="id" title="var">Ty_Ifz</span> <span class="id" title="var">e1</span> <span class="id" title="var">e2</span> <span class="id" title="var">e3</span> <span class="id" title="var">A</span> :<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(<span class="id" title="var">ty</span> <span class="id" title="var">Γ</span> <span class="id" title="var">e1</span> <span class="id" title="var">N</span>) → (<span class="id" title="var">ty</span> <span class="id" title="var">Γ</span> <span class="id" title="var">e2</span> <span class="id" title="var">A</span>) → (<span class="id" title="var">ty</span> <span class="id" title="var">Γ</span> <span class="id" title="var">e2</span> <span class="id" title="var">A</span>) → <span class="id" title="var">ty</span> <span class="id" title="var">Γ</span> (<span class="id" title="var">ifz</span> <span class="id" title="var">e1</span> <span class="id" title="keyword">then</span> <span class="id" title="var">e2</span> <span class="id" title="keyword">else</span> <span class="id" title="var">e3</span>) <span class="id" title="var">A</span><br/>
+<span class="id" title="keyword">where</span> &quot;g '⊢' e ':' t" := (<span class="id" title="var">ty</span> <span class="id" title="var">g</span> <span class="id" title="var">e</span> <span class="id" title="var">t</span>).<br/>
+
+<br/>
+</div>
+
+<div class="doc">
+<a id="lab3"></a><h1 class="section">The Scott Model of PCF</h1>
+
+</div>
+<div class="code">
+
+<br/>
+</div>
+</div>
+
+<div id="footer">
+<hr/><a href="index.html">Index</a><hr/>This page has been generated by <a href="http://coq.inria.fr/">coqdoc</a>
+</div>
+
+</div>
+
+</body>
+</html>
